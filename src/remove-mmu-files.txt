@@ -1,0 +1,13 @@
+The following MMU-related files can be safely removed as they're not used by the Coffee Fund system:
+
+1. src/screens/MMUDashboard.jsx
+2. src/screens/mmu/ (entire directory with all its files)
+
+These files were related to the previous MMU (Mountains of the Moon University) system, but the application has been refocused to be only about the Inspire Africa Coffee Fund.
+
+The Coffee Fund system only depends on:
+- src/screens/coffee/ (directory)
+- src/screens/auth/ (directory)
+- src/screens/CoffeeFundDashboard.jsx
+
+Remember to back up these files before deleting them, in case they're needed for reference later.
