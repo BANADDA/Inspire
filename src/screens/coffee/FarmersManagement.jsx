@@ -1142,8 +1142,11 @@ const FarmersManagement = ({ darkMode, userRole }) => {
                       className={`w-full p-2 rounded-md border ${
                         darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'
                       }`}
-                      placeholder="e.g., 0.3476° N, 32.5825° E"
+                      placeholder="e.g., Buyanja Sub county"
                     />
+                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Enter a descriptive location (e.g., village, parish, or sub-county name)
+                    </p>
                   </div>
                   
                   {/* Farm Information */}
