@@ -130,4 +130,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-Project Link: [https://github.com/your-org/inspire-africa-coffee-fund](https://github.com/your-org/inspire-africa-coffee-fund)
+Project Link: [https://github.com/BANADDA/inspire-africa-coffee-fund](https://github.com/BANADDA/inspire-africa-coffee-fund)
