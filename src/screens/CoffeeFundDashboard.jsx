@@ -1,23 +1,24 @@
 import { collection, getCountFromServer, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import {
-  AlertTriangle,
-  BarChart,
-  Building,
-  Coffee,
-  CreditCard,
-  Flower,
-  Home,
-  LogOut,
-  Map,
-  Menu,
-  Moon,
-  RefreshCw,
-  Settings,
-  Star,
-  Sun,
-  Truck,
-  User,
-  Wallet
+    AlertTriangle,
+    BarChart,
+    Building,
+    Coffee,
+    CreditCard,
+    Flower,
+    Home,
+    LogOut,
+    Map,
+    Menu,
+    Moon,
+    RefreshCw,
+    Settings,
+    Star,
+    Sun,
+    Truck,
+    User,
+    Users,
+    Wallet
 } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
@@ -33,6 +34,7 @@ import LoansManagement from './coffee/LoansManagement';
 import OrganizationsManagement from './coffee/OrganizationsManagement';
 import SuppliersManagement from './coffee/SuppliersManagement';
 import GradingView from './coffee/transactions/GradingView';
+import VillageAgentsSection from './coffee/VillageAgentsSection';
 
 const CoffeeFundDashboard = ({ darkMode, updateDarkMode }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -363,6 +365,7 @@ const CoffeeFundDashboard = ({ darkMode, updateDarkMode }) => {
       items: [
         { id: 'farmers', label: 'Farmers', icon: User },
         { id: 'farmerMap', label: 'Farmer Map', icon: Map },
+        { id: 'villageAgents', label: 'Village Agents', icon: Users },
         { id: 'organizations', label: 'Organizations', icon: Building },
         { id: 'suppliers', label: 'Suppliers', icon: Truck }
       ]
@@ -414,6 +417,8 @@ const CoffeeFundDashboard = ({ darkMode, updateDarkMode }) => {
         return <GradingView darkMode={darkMode} userRole={userRole} />;
       case 'farmerMap':
         return <FarmersMapSection darkMode={darkMode} />;
+      case 'villageAgents':
+        return <VillageAgentsSection darkMode={darkMode} />;
       // case 'analytics':
       //   return <AnalyticsScreen darkMode={darkMode} stats={stats} />;
       // case 'settings':
@@ -706,9 +711,9 @@ const CoffeeFundDashboard = ({ darkMode, updateDarkMode }) => {
   };
 
   return (
-    <div className={`min-h-screen h-full flex flex-col ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      {/* Header */}
-      <header className={`flex justify-between items-center py-4 px-6 ${darkMode ? 'bg-gray-800 border-b border-gray-700' : 'bg-white shadow-sm'}`}>
+    <div className={`min-h-screen h-screen flex flex-col ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
+      {/* Header - Fixed at top */}
+      <header className={`fixed top-0 left-0 right-0 z-10 flex justify-between items-center py-4 px-6 ${darkMode ? 'bg-gray-800 border-b border-gray-700' : 'bg-white shadow-sm'}`}>
         <div className="flex items-center">
           <button 
             onClick={toggleMenu} 
@@ -747,12 +752,13 @@ const CoffeeFundDashboard = ({ darkMode, updateDarkMode }) => {
         </div>
       </header>
       
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+      {/* Content area - with header spacing */}
+      <div className="flex flex-1 pt-16"> {/* Add padding-top to account for fixed header */}
+        {/* Sidebar - Fixed position */}
         <aside 
-          className={`w-64 shrink-0 transition-all duration-300 ease-in-out overflow-y-auto ${menuOpen ? 'translate-x-0' : '-translate-x-full'} ${darkMode ? 'bg-gray-800 border-r border-gray-700' : 'bg-white border-r border-gray-200'} md:block hidden`}
+          className={`fixed left-0 top-16 bottom-0 w-64 transition-all duration-300 ease-in-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'} ${darkMode ? 'bg-gray-800 border-r border-gray-700' : 'bg-white border-r border-gray-200'} md:block hidden`}
         >
-          <nav className="p-4">
+          <nav className="p-4 h-full">
             {menuSections.map((section) => (
               <div key={section.title} className="mb-6">
                 <h2 className={`px-4 mb-2 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>
@@ -797,12 +803,10 @@ const CoffeeFundDashboard = ({ darkMode, updateDarkMode }) => {
             onClick={() => setMenuOpen(false)}
           >
             <aside 
-              className={`w-64 h-full transition-all duration-300 ease-in-out overflow-y-auto ${
-                darkMode ? 'bg-gray-800' : 'bg-white'
-              }`}
+              className={`w-64 h-full transition-all duration-300 ease-in-out ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
               onClick={e => e.stopPropagation()}
             >
-              <nav className="p-4">
+              <nav className="p-4 h-full">
                 {menuSections.map((section) => (
                   <div key={section.title} className="mb-6">
                     <h2 className={`px-4 mb-2 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>
@@ -844,8 +848,8 @@ const CoffeeFundDashboard = ({ darkMode, updateDarkMode }) => {
           </div>
         )}
         
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+        {/* Main content - With left padding for sidebar */}
+        <main className="flex-1 overflow-y-auto md:ml-64 pb-16 md:pb-0">
           {renderContent()}
         </main>
       </div>

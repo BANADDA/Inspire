@@ -111,7 +111,7 @@ function createTooltipContent(farmer) {
 }
 
 // Update the LeafletMap component to include map controls inside
-function LeafletMap({ region, farmers, onMarkerClick, darkMode, onRegionChange, regions, selectedRegion, onOpenLargerMap }) {
+function LeafletMap({ region, farmers, onMarkerClick, darkMode, onOpenLargerMap }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
@@ -206,18 +206,39 @@ function LeafletMap({ region, farmers, onMarkerClick, darkMode, onRegionChange, 
     }
     
     // Remove existing polygons
-    Object.values(polygonsRef.current).forEach(polygon => {
-      if (mapInstanceRef.current.hasLayer(polygon)) {
-        mapInstanceRef.current.removeLayer(polygon);
-      }
-    });
+    if (mapInstanceRef.current) {
+      Object.values(polygonsRef.current).forEach(polygon => {
+        if (mapInstanceRef.current.hasLayer(polygon)) {
+          mapInstanceRef.current.removeLayer(polygon);
+        }
+      });
+    }
     polygonsRef.current = {};
     
     // Create new marker cluster group
     const clusterGroup = L.markerClusterGroup({
-      showCoverageOnHover: true,
-      zoomToBoundsOnClick: true,
-      maxClusterRadius: 50,
+      showCoverageOnHover: false,      // Disable showing coverage area
+      spiderfyOnMaxZoom: true,        // Enable spiderfying at max zoom
+      disableClusteringAtZoom: 18,    // Disable clustering at very high zoom levels
+      maxClusterRadius: 40,           // Smaller radius for tighter clustering
+      spiderfyDistanceMultiplier: 2,  // Increase distance when spiderfying
+      zoomToBoundsOnClick: function(e) {
+        // Custom zoom behavior when clicking clusters
+        const cluster = e.layer;
+        const bounds = cluster.getBounds();
+        
+        // If bounds are very small (points very close), zoom in more aggressively
+        const isSmallArea = bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 500;
+        
+        mapInstanceRef.current.fitBounds(bounds, {
+          padding: [40, 40],
+          maxZoom: isSmallArea ? 19 : 16, // Zoom in more for small areas
+          animate: true
+        });
+        
+        // Prevent default behavior
+        return false;
+      },
       iconCreateFunction: function(cluster) {
         const childCount = cluster.getChildCount();
         const markers = cluster.getAllChildMarkers();
@@ -278,73 +299,77 @@ function LeafletMap({ region, farmers, onMarkerClick, darkMode, onRegionChange, 
       locationGroups[key].farmers.push(farmer);
     });
     
-    // Create polygons for groups with multiple farmers
+    // REMOVE the code that creates polygons for groups with multiple farmers
+    // Instead, we'll only create circles for dense areas without radiating lines
     Object.entries(locationGroups).forEach(([key, group]) => {
-      if (group.farmers.length >= 3) {
-        const points = group.farmers.map(farmer => {
-          const coords = getCoordinates(farmer);
-          if (coords) return coords;
-          return group.center; // Fallback to center
+      if (group.farmers.length >= 5) { // Only show for groups with at least 5 farmers
+        // Calculate dominant coffee type
+        const types = {
+          arabica: 0,
+          robusta: 0,
+          other: 0
+        };
+        
+        group.farmers.forEach(farmer => {
+          const coffeeType = farmer.farm?.coffeeType?.toLowerCase() || '';
+          if (coffeeType.includes('arabica')) {
+            types.arabica++;
+          } else if (coffeeType.includes('robusta')) {
+            types.robusta++;
+          } else {
+            types.other++;
+          }
         });
         
-        // Create convex hull or just a circle if points are too close
-        try {
-          const latlngs = points.map(point => L.latLng(point[0], point[1]));
-          
-          // Calculate dominant coffee type
-          const types = {
-            arabica: 0,
-            robusta: 0,
-            other: 0
-          };
-          
-          group.farmers.forEach(farmer => {
-            const coffeeType = farmer.farm?.coffeeType?.toLowerCase() || '';
-            if (coffeeType.includes('arabica')) {
-              types.arabica++;
-            } else if (coffeeType.includes('robusta')) {
-              types.robusta++;
-            } else {
-              types.other++;
-            }
-          });
-          
-          // Determine polygon color based on dominant type
-          let fillColor = '#8B5CF6'; // Purple default
-          if (types.arabica > types.robusta && types.arabica > types.other) {
-            fillColor = '#10B981'; // Green
-          } else if (types.robusta > types.arabica && types.robusta > types.other) {
-            fillColor = '#3B82F6'; // Blue
-          }
-          
-          const polygon = L.polygon(latlngs, {
-            fillColor: fillColor,
-            fillOpacity: 0.2,
-            color: fillColor,
-            weight: 2
-          });
-          
-          // Add click event to zoom in
-          polygon.on('click', function() {
-            const bounds = polygon.getBounds();
-            mapInstanceRef.current.fitBounds(bounds, {
-              padding: [50, 50],
-              maxZoom: 12
-            });
-          });
-          
-          // Add tooltip with count
-          polygon.bindTooltip(`${group.farmers.length} coffee farmers in this area`, {
-            permanent: false,
-            direction: 'center',
-            className: 'cluster-info'
-          });
-          
-          polygon.addTo(mapInstanceRef.current);
-          polygonsRef.current[key] = polygon;
-        } catch (error) {
-          console.error("Error creating polygon:", error);
+        // Determine color based on dominant type
+        let fillColor = '#8B5CF6'; // Purple default
+        if (types.arabica > types.robusta && types.arabica > types.other) {
+          fillColor = '#10B981'; // Green
+        } else if (types.robusta > types.arabica && types.robusta > types.other) {
+          fillColor = '#3B82F6'; // Blue
         }
+        
+        // Create a simple circle representing the group density
+        const centerLatLng = L.latLng(group.center[0], group.center[1]);
+        const radius = Math.min(3000, 500 + (group.farmers.length * 20)); // Cap at 3km
+        
+        const circle = L.circle(centerLatLng, {
+          radius: radius,
+          fillColor: fillColor,
+          fillOpacity: 0.15,
+          color: fillColor,
+          weight: 1.5,
+          opacity: 0.6
+        });
+        
+        // Add click event to zoom in
+        circle.on('click', function(e) {
+          // Stop event propagation
+          L.DomEvent.stopPropagation(e);
+          
+          // Create a circle for bounding and get its bounds
+          const areaBounds = L.circle(centerLatLng, {
+            radius: radius / 1.5 // Slightly smaller than the visual circle
+          }).getBounds();
+          
+          // Zoom to this area with high zoom level for dense areas
+          mapInstanceRef.current.fitBounds(areaBounds, {
+            padding: [40, 40],
+            maxZoom: 16, // High zoom level to reveal individual points
+            animate: true,
+            duration: 0.8
+          });
+        });
+        
+        // Add tooltip with count
+        circle.bindTooltip(`${group.farmers.length} coffee farmers in this area`, {
+          permanent: false,
+          direction: 'center',
+          className: 'cluster-info'
+        });
+        
+        circle.addTo(mapInstanceRef.current);
+        polygonsRef.current[key] = circle;
       }
     });
     
@@ -401,11 +426,13 @@ function LeafletMap({ region, farmers, onMarkerClick, darkMode, onRegionChange, 
       }
       
       // Remove polygons
-      Object.values(polygonsRef.current).forEach(polygon => {
-        if (mapInstanceRef.current.hasLayer(polygon)) {
-          mapInstanceRef.current.removeLayer(polygon);
-        }
-      });
+      if (mapInstanceRef.current) {
+        Object.values(polygonsRef.current).forEach(polygon => {
+          if (mapInstanceRef.current.hasLayer(polygon)) {
+            mapInstanceRef.current.removeLayer(polygon);
+          }
+        });
+      }
     };
   }, [farmers, onMarkerClick]);
   
@@ -452,9 +479,6 @@ LeafletMap.propTypes = {
   farmers: PropTypes.array.isRequired,
   onMarkerClick: PropTypes.func.isRequired,
   darkMode: PropTypes.bool.isRequired,
-  onRegionChange: PropTypes.func.isRequired,
-  regions: PropTypes.object.isRequired,
-  selectedRegion: PropTypes.string.isRequired,
   onOpenLargerMap: PropTypes.func.isRequired
 };
 
@@ -585,9 +609,6 @@ const FarmersMapSection = ({ darkMode }) => {
                     farmers={farmers}
                     onMarkerClick={handleMarkerClick}
                     darkMode={darkMode}
-                    onRegionChange={handleRegionChange}
-                    regions={regions}
-                    selectedRegion={selectedRegion}
                     onOpenLargerMap={openLargerMap}
                   />
                 ) : (
